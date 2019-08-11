@@ -51,10 +51,10 @@ if __name__ == "__main__":
     telemetryChannel = pygame.mixer.Channel(4)
 
     # Set the volume for all channels separately.. 
-    pygame.mixer.Channel(0).set_volume(0.6)
     pygame.mixer.Channel(1).set_volume(0.6)
     pygame.mixer.Channel(2).set_volume(0.6)
     pygame.mixer.Channel(3).set_volume(0.6)
+    pygame.mixer.Channel(4).set_volume(0.6)
 
     # Some variables
     volume = 0.6
@@ -73,18 +73,18 @@ if __name__ == "__main__":
     def volume_down():                    # Pin A event handler
         print ("Volume Down")
         #pygame.mixer.music.set_volume(pygame.mixer.music.get_volume()-0.1)
-        pygame.mixer.Channel(0).set_volume(pygame.mixer.Channel(0).get_volume()-0.1)
         pygame.mixer.Channel(1).set_volume(pygame.mixer.Channel(1).get_volume()-0.1)
         pygame.mixer.Channel(2).set_volume(pygame.mixer.Channel(2).get_volume()-0.1)
         pygame.mixer.Channel(3).set_volume(pygame.mixer.Channel(3).get_volume()-0.1)
+        pygame.mixer.Channel(4).set_volume(pygame.mixer.Channel(4).get_volume()-0.1)
         
     def volume_up():                  
         print ("Volume Up")
         #pygame.mixer.music.set_volume(pygame.mixer.music.get_volume()+0.1)
-        pygame.mixer.Channel(0).set_volume(pygame.mixer.Channel(0).get_volume()+0.1)
         pygame.mixer.Channel(1).set_volume(pygame.mixer.Channel(1).get_volume()+0.1)
         pygame.mixer.Channel(2).set_volume(pygame.mixer.Channel(2).get_volume()+0.1)
         pygame.mixer.Channel(3).set_volume(pygame.mixer.Channel(3).get_volume()+0.1)
+        pygame.mixer.Channel(4).set_volume(pygame.mixer.Channel(4).get_volume()+0.1)
 
     while True:
 
