@@ -9,4 +9,4 @@ You have been warned :)
 
 Also, feel free to copy/modify and use this piece of code if you find it useful. As thanks you could always follow my blog (https://oleandre.net) and/or Instagram (https://www.instagram.com/oleshobbyblog/) and/or YouTube (https://www.youtube.com/user/vaipernor). 
 
-/OleA
+/Ole

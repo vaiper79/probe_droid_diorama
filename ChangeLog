@@ -1,9 +1,20 @@
 Change Log
 
 Remaining Items:
-- Tons...
+- Building a DAC to get rid of volume buttons. Want to use a potentiometer instead
+- Figure out LED animation
+- Pick best soundfiles, ditch the rest
+- Make chatter and telemetry one channel?
+- Figure out right volume for channels
 
 Done/Ignored/Fixed/Created/Removed/Tested (version numbers are internal for now):
+
+Version 2:
+- Added: OS code to ensure system volume is 70%
+- Added: Simple LED pulse code
+- Done: Sorted out the final pinout
+- Done: Temporarily set up to use push buttons for volume up/down as my rotary encoders were too inaccurate (many false readings)
+- 
 
 Version 1:
 - Created GitHub repo..updates will follow
