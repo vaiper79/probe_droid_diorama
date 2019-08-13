@@ -1,13 +1,16 @@
 Change Log
 
 Remaining Items:
-- Building a DAC to get rid of volume buttons. Want to use a potentiometer instead
 - Figure out LED animation
 - Pick best soundfiles, ditch the rest
 - Make chatter and telemetry one channel?
 - Figure out right volume for channels
 
 Done/Ignored/Fixed/Created/Removed/Tested (version numbers are internal for now):
+
+Version 3: 
+- Removed: Volume buttons
+- Added: SPI DAC for reading 10K pot for volume control
 
 Version 2:
 - Added: OS code to ensure system volume is 70%
