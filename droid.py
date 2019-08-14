@@ -97,7 +97,6 @@ def remap_range(value, left_min, left_max, right_min, right_max):
     # Convert the 0-1 range into a value in the right range.
     return int(right_min + (valueScaled * right_span))
 
-
 while True:
 
     if (pygame.time.get_ticks() - lastBlinkMillis >= blinkMillis):
