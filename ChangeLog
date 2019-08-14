@@ -2,11 +2,20 @@ Change Log
 
 Remaining Items:
 - Figure out LED animation
+- Generate animation sequences
 - Pick best soundfiles, ditch the rest
 - Make chatter and telemetry one channel?
 - Figure out right volume for channels
+- Sort out better PSU situation
+- Perhaps have different debugs..sound, lights, volume..
 
 Done/Ignored/Fixed/Created/Removed/Tested (version numbers are internal for now):
+
+version 4: 
+- Added: Amplifier code for TPA2016 i2c controlled amplifier. Currently powered via RPi, and this is causing clipping. 
+- Removed: Initial volume setting. The new volume knob code sorts this out by default
+- Removed: Some unecessary comments
+- Added: Print is now caused by setting debug to True. Seems to speed up things not having to write to the terminal what is going on
 
 Version 3: 
 - Removed: Volume buttons
@@ -17,7 +26,6 @@ Version 2:
 - Added: Simple LED pulse code
 - Done: Sorted out the final pinout
 - Done: Temporarily set up to use push buttons for volume up/down as my rotary encoders were too inaccurate (many false readings)
-- 
 
 Version 1:
 - Created GitHub repo..updates will follow
