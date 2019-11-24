@@ -7,36 +7,67 @@
 # Amplifier configuration by Adafruit:
 # Hardware: TPA2016 i2c amplifier
 # Code: https://learn.adafruit.com/adafruit-tpa2016-2-8w-agc-stereo-audio-amplifier/python-circuitpython
+# Logging Code: https://gist.github.com/sweenzor/1782457
+# Shutdown: https://gpiozero.readthedocs.io/en/stable/recipes.html#shutdown-button
 
-import pygame, random, time, os, busio, digitalio, board, adafruit_tpa2016
-import adafruit_mcp3xxx.mcp3008 as MCP
-from adafruit_mcp3xxx.analog_in import AnalogIn
-from gpiozero import Button, PWMLED
+
+import pygame, random, time, os, busio, digitalio, board, adafruit_tpa2016, logging, logging.handlers
+from gpiozero import Button, PWMLED, LED
+from subprocess import check_call
+from signal import pause
+
+# Some variables
+volume = 0.6
+started = 0
+rndmChatterMillis = 0
+lastChatterMillis = 0
+rndmTelemetryMillis = 0
+lastTelemetryMillis = 0
+lastLEDMillis = 0
+LEDMillis = 500
+LEDState = 0
+LEDTriggered = 0
+musicTriggered = 0
+musicState = 0
+
+# Set up logging
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
+handler = logging.handlers.SysLogHandler(address = '/dev/log')
+formatter = logging.Formatter('%(module)s.%(funcName)s: %(message)s')
+handler.setFormatter(formatter)
+log.addHandler(handler)
 
 # Amplifier code
 i2c = busio.I2C(board.SCL, board.SDA)
 tpa = adafruit_tpa2016.TPA2016(i2c)
 tpa.fixed_gain = 0 # Anything above and the way it is connected now causes clipping. Perhaps separate of more powerful PSU = more oomf!
 
-# create the spi bus
-spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
+# GPIO Pins defined
+button_top = Button(17, hold_time=3)  
+button_volUp = Button(4)
+button_volDwn = Button(27)
 
-# create the cs (chip select)
-cs = digitalio.DigitalInOut(board.D22)
+#amp = LED(7) # Testing...
 
-# create the mcp object
-mcp = MCP.MCP3008(spi, cs)
+led_front1 = PWMLED(5)
+led_front2 = PWMLED(6)
+led_front3 = PWMLED(13) 
+led_front4 = PWMLED(19)
+led_button = PWMLED(26)
 
-# create an analog input channel on pin 0
-chan0 = AnalogIn(mcp, MCP.P0)
+#led_droidRed = GPIO.PWM(18, 1000) # HW PWM
+led_droidRed = PWMLED(18)
+led_droidYlw = PWMLED(16)
 
-# Pins defined
-button = Button(17, hold_time=3)    
-led1 = PWMLED(5)
-led2 = PWMLED(6)
-led3 = PWMLED(13)
-led4 = PWMLED(19)
-led5 = PWMLED(26)
+# Making sure all is dark
+led_front1.value = 0
+led_front2.value = 0
+led_front3.value = 0
+led_front4.value = 0
+led_button.value = 0
+led_droidRed.value = 0
+led_droidYlw.value = 0
 
 pygame.init() # Required to get_ticks() since start
 
@@ -60,115 +91,118 @@ hoverChannel = pygame.mixer.Channel(3)
 telemetryChannel = pygame.mixer.Channel(4)
 
 # Set the volume for all channels separately.. 
-pygame.mixer.Channel(1).set_volume(0.6)
-pygame.mixer.Channel(2).set_volume(0.6)
-pygame.mixer.Channel(3).set_volume(0.6)
-pygame.mixer.Channel(4).set_volume(0.6)
+pygame.mixer.music.set_volume(volume)
+pygame.mixer.Channel(1).set_volume(volume)
+pygame.mixer.Channel(2).set_volume(volume)
+pygame.mixer.Channel(3).set_volume(volume)
+pygame.mixer.Channel(4).set_volume(volume)
 
-# Some variables
-debug = False
-volume = 0.6
-started = 0
-rndmChatterMillis = 0
-lastChatterMillis = 0
-rndmTelemetryMillis = 0
-lastTelemetryMillis = 0
-blinkMillis = 50
-lastBlinkMillis = 0
-brightness=0
-fadeAmount=0.03
-last_read = 0       # this keeps track of the last potentiometer value
-tolerance = 300     # to keep from being jittery we'll only change
-                    # volume when the pot has moved a significant amount
-                    # on a 16-bit ADC
+def volumeChange(volume):
+    pygame.mixer.music.set_volume(volume)
+    pygame.mixer.Channel(1).set_volume(volume)
+    pygame.mixer.Channel(2).set_volume(volume)
+    pygame.mixer.Channel(3).set_volume(volume)
+    pygame.mixer.Channel(4).set_volume(volume)
 
-def doIt(): # Example...
-    print ("Just Do It!!!")
 
-def remap_range(value, left_min, left_max, right_min, right_max):
-    # this remaps a value from original (left) range to new (right) range
-    # Figure out how 'wide' each range is
-    left_span = left_max - left_min
-    right_span = right_max - right_min
 
-    # Convert the left range into a 0-1 range (int)
-    valueScaled = int(value - left_min) / int(left_span)
+def doIt(): # Could do one thing on the first press..something else on the next..etc...but what.. 
+    global musicState
+    global musicTriggered
+    log.debug("Turning off music")
+    if (musicState == 0 and musicTriggered == 0):
+        print("Set volume 0")
+        pygame.mixer.music.set_volume(0)
+        musicState = 1
+        musicTriggered = 1
+    if (musicState == 1 and musicTriggered == 0):
+        pygame.mixer.music.set_volume(volume)
+        musicState = 0
+        musicTriggered = 1
+    musicTriggered = 0
 
-    # Convert the 0-1 range into a value in the right range.
-    return int(right_min + (valueScaled * right_span))
+def shutDown():
+    log.debug("Shutting down amplifier")
+    tpa.amplifier_shutdown = True
+    log.debug("Shutting down droid controller")
+    #check_call(['sudo', 'poweroff']) # Shutsdown the OS. Will leave this out until prod.. 
+
+def volDwn():
+    log.debug("Volume Down")
+    global volume
+    volume = volume - 0.05
+    volumeChange(volume)
+
+def volUp():
+    log.debug("Volume Up")
+    global volume
+    volume = volume + 0.05
+    volumeChange(volume)
+
+# Start amplifier
+log.debug("Switching on the amplifier")
+tpa.amplifier_shutdown = False # Not strickly necessary..but for completeness. 
 
 while True:
 
-    if (pygame.time.get_ticks() - lastBlinkMillis >= blinkMillis):
-        brightness = brightness+fadeAmount
-        brightness = round(brightness, 3) # Raspberry and Python doing simple 0.1+0.1 very quickly did not work out well..
+## BUTTONS ## - More or less done
 
-        if brightness > 1:
-            brightness = 1
-        if brightness <0:
-            brightness = 0
+    button_top.when_held = shutDown # Hold for 3 seconds to shut down..requires power cycle. 
+    button_top.when_released = doIt
+    button_volUp.when_released = volUp
+    button_volDwn.when_released = volDwn
 
-        if (brightness <= 0) or (brightness >= 1): # Fade in/Fade out
-            fadeAmount = -fadeAmount;
 
-        if debug == True: print (brightness)
+## LIGHTS ## - FAR from done.. 
 
-        # Quick and dirty pulsing of LEDs..not final product. 
-        led1.value = brightness
-        led2.value = brightness
-        led3.value = brightness
-        led4.value = brightness
-        led5.value = brightness
+    # Not very elegant..just blinks the lights on and off.. 
+    if (pygame.time.get_ticks() - lastLEDMillis >= LEDMillis):
+        log.debug("Do something to LEDs")
+        if (LEDState == 0 and LEDTriggered == 0):
+            log.debug("Turn LEDs on")
+            led_front1.value = 0.005  
+            led_front2.value = 0.005  
+            led_front3.value = 0.005  
+            led_front4.value = 0.005  
+            led_button.value = 0.1
+            led_droidRed.value = 0.1
+            led_droidYlw.value = 0.1
+            LEDTriggered = 1
+            LEDState = 1
+        if (LEDState == 1 and LEDTriggered == 0):
+            log.debug("Turn LEDs off")
+            led_front1.value = 0  
+            led_front2.value = 0  
+            led_front3.value = 0  
+            led_front4.value = 0  
+            led_button.value = 0
+            led_droidRed.value = 0
+            led_droidYlw.value = 0
+            LEDState = 0
+            LEDTriggered = 1
+        LEDTriggered = 0
+        lastLEDMillis = pygame.time.get_ticks()
 
-        lastBlinkMillis = pygame.time.get_ticks()
-            
-    # we'll assume that the pot didn't move
-    trim_pot_changed = False
 
-    # read the analog pin
-    trim_pot = chan0.value
-
-    # how much has it changed since the last read?
-    pot_adjust = abs(trim_pot - last_read)
-
-    if pot_adjust > tolerance:
-        trim_pot_changed = True
-
-    if trim_pot_changed:
-        # convert 16bit adc0 (0-65535) trim pot read into 0-100 volume level
-        set_volume = remap_range(trim_pot, 0, 65535, 0, 100)
-
-        # set OS volume playback volume
-        if debug == True: print('Volume = {volume}%' .format(volume = set_volume))
-        set_vol_cmd = 'sudo amixer cset numid=1 -- {volume}% > /dev/null' \
-        .format(volume = set_volume)
-        os.system(set_vol_cmd)
-
-        # save the potentiometer reading for the next loop
-        last_read = trim_pot
-
-    if button.is_held:  # Used to exit when held for hold time, which now is 3 seconds
-        exit()
-
-    button.when_released = doIt
+## MUSIC ## - More or less done
 
     # Background Music Playing 
     if started == 0:
-        if debug == True: print ("Playing BG music indefinately")
+        log.debug("Playing BG music indefinately")
         pygame.mixer.music.play(loops=-1)  # Looping the loaded music file indef.. 
         started = 1
 
     # Droid Hover, randomized in content
     if hoverChannel.get_busy() == False:
         rand = str(random.randrange(1, 8))
-        if debug == True: print ("Playing hover:" + str(rand))
+        log.debug("Playing hover:" + str(rand))
         hoverChannel.play(pygame.mixer.Sound("/home/pi/droid/audio/hover"+rand+".wav"))
 
     # Droid Chatter, randomized in content and time
     if (pygame.time.get_ticks() - lastChatterMillis >= rndmChatterMillis) and (chatterChannel.get_busy() == False) and (telemetryChannel.get_busy() == False):
         rand = str(random.randrange(1, 19))
         rndmChatterMillis = random.randrange(800, 8000)
-        if debug == True: print ("Playing chatter:" + str(rand) + ", " + str(rndmChatterMillis) + " since last")
+        log.debug("Playing chatter:" + str(rand) + ", " + str(rndmChatterMillis) + " since last")
         lastChatterMillis = pygame.time.get_ticks()
         chatterChannel.play(pygame.mixer.Sound("/home/pi/droid/audio/chatter"+rand+".wav"))
 
@@ -176,6 +210,6 @@ while True:
     if (pygame.time.get_ticks() - lastChatterMillis >= rndmChatterMillis) and (chatterChannel.get_busy() == False) and (telemetryChannel.get_busy() == False):
         rand = str(random.randrange(1, 8))
         rndmTelemetryMillis = random.randrange(1000, 15000)
-        if debug == True: print ("Playing telemetry:" + str(rand) + ", " + str(rndmTelemetryMillis) + " since last")
+        log.debug("Playing telemetry:" + str(rand) + ", " + str(rndmTelemetryMillis) + " since last")
         lastTelemetryMillis = pygame.time.get_ticks()
         telemetryChannel.play(pygame.mixer.Sound("/home/pi/droid/audio/telemetry"+rand+".wav"))

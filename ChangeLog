@@ -6,10 +6,20 @@ Remaining Items:
 - Pick best soundfiles, ditch the rest
 - Make chatter and telemetry one channel?
 - Figure out right volume for channels
-- Sort out better PSU situation
-- Perhaps have different debugs..sound, lights, volume..
+- Build droid..
+
 
 Done/Ignored/Fixed/Created/Removed/Tested (version numbers are internal for now):
+
+versio 5 - 24.11.2019:
+- Changed: Volume now adjusted by push buttons, not the rotary encoder. The encoder, while it worked, consumed a lot of resources and made everything else sluggish. 
+- Changed: Shutdown code now does not pass OS type command
+- Changed: Now using pygame to adjust volumes
+- Added: All LEDs are defined and blinking once a second for now
+- Added: All buttons are defined and doing what they should
+- Removed: DAC and rotary encoder code
+- Done: Enclosure and electronics
+- Added: Syslog logging
 
 version 4 - 14.08.2019: 
 - Added: Amplifier code for TPA2016 i2c controlled amplifier. Currently powered via RPi, and this is causing clipping. 
