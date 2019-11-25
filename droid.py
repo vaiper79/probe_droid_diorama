@@ -1,6 +1,6 @@
 # Python3
 
-# Version 4, 14.08.2019, OleA aka vaiper79
+# Version 6, 25.11.2019, OleA aka vaiper79
 # Volume configuration by Adafruit:
 # Hardware: MCP3008 DAC Chip 
 # Code: https://learn.adafruit.com/reading-a-analog-in-and-controlling-audio-volume-with-the-raspberry-pi/overview
@@ -10,25 +10,29 @@
 # Logging Code: https://gist.github.com/sweenzor/1782457
 # Shutdown: https://gpiozero.readthedocs.io/en/stable/recipes.html#shutdown-button
 
-
 import pygame, random, time, os, busio, digitalio, board, adafruit_tpa2016, logging, logging.handlers
 from gpiozero import Button, PWMLED, LED
 from subprocess import check_call
 from signal import pause
 
-# Some variables
+## Some variables
+# Shutdown
+shDwn = False
+# Audio
 volume = 0.6
 started = 0
 rndmChatterMillis = 0
 lastChatterMillis = 0
 rndmTelemetryMillis = 0
 lastTelemetryMillis = 0
-lastLEDMillis = 0
-LEDMillis = 500
-LEDState = 0
-LEDTriggered = 0
 musicTriggered = 0
 musicState = 0
+# LEDs
+lastLEDMillis = 0
+lastCountDMillis = 0
+LEDMillis = 60
+brList = [0.001, 0.02, 0.005, 0.01, 0.008, 0.012, 0.015, 0.002, 0.007, 0.017, 0.011, 0.009] # Brightnesses to use for flickering lights
+shDwnBr = 0.1
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -47,15 +51,11 @@ tpa.fixed_gain = 0 # Anything above and the way it is connected now causes clipp
 button_top = Button(17, hold_time=3)  
 button_volUp = Button(4)
 button_volDwn = Button(27)
-
-#amp = LED(7) # Testing...
-
 led_front1 = PWMLED(5)
 led_front2 = PWMLED(6)
 led_front3 = PWMLED(13) 
 led_front4 = PWMLED(19)
 led_button = PWMLED(26)
-
 #led_droidRed = GPIO.PWM(18, 1000) # HW PWM
 led_droidRed = PWMLED(18)
 led_droidYlw = PWMLED(16)
@@ -104,8 +104,6 @@ def volumeChange(volume):
     pygame.mixer.Channel(3).set_volume(volume)
     pygame.mixer.Channel(4).set_volume(volume)
 
-
-
 def doIt(): # Could do one thing on the first press..something else on the next..etc...but what.. 
     global musicState
     global musicTriggered
@@ -122,10 +120,29 @@ def doIt(): # Could do one thing on the first press..something else on the next.
     musicTriggered = 0
 
 def shutDown():
+    global shDwn 
+    shDwn = True
     log.debug("Shutting down amplifier")
     tpa.amplifier_shutdown = True
+    log.debug("Counting down..")
+    led_front1.value = shDwnBr
+    led_front2.value = shDwnBr
+    led_front3.value = shDwnBr
+    led_front4.value = shDwnBr
+    time.sleep(0.5)             # It is fine, we are about to shut down, no more input or output at this time
+    led_front4.value = 0
+    time.sleep(0.5)
+    led_front3.value = 0
+    time.sleep(0.5)
+    led_front2.value = 0
+    time.sleep(0.5)
+    led_front1.value = 0
+    led_droidRed = 0
+    led_droidYlw = 0
+    led_button = 0
     log.debug("Shutting down droid controller")
     #check_call(['sudo', 'poweroff']) # Shutsdown the OS. Will leave this out until prod.. 
+    time.sleep(10)
 
 def volDwn():
     log.debug("Volume Down")
@@ -152,37 +169,16 @@ while True:
     button_volUp.when_released = volUp
     button_volDwn.when_released = volDwn
 
-
 ## LIGHTS ## - FAR from done.. 
-
-    # Not very elegant..just blinks the lights on and off.. 
-    if (pygame.time.get_ticks() - lastLEDMillis >= LEDMillis):
-        log.debug("Do something to LEDs")
-        if (LEDState == 0 and LEDTriggered == 0):
-            log.debug("Turn LEDs on")
-            led_front1.value = 0.005  
-            led_front2.value = 0.005  
-            led_front3.value = 0.005  
-            led_front4.value = 0.005  
-            led_button.value = 0.1
-            led_droidRed.value = 0.1
-            led_droidYlw.value = 0.1
-            LEDTriggered = 1
-            LEDState = 1
-        if (LEDState == 1 and LEDTriggered == 0):
-            log.debug("Turn LEDs off")
-            led_front1.value = 0  
-            led_front2.value = 0  
-            led_front3.value = 0  
-            led_front4.value = 0  
-            led_button.value = 0
-            led_droidRed.value = 0
-            led_droidYlw.value = 0
-            LEDState = 0
-            LEDTriggered = 1
-        LEDTriggered = 0
-        lastLEDMillis = pygame.time.get_ticks()
-
+    if (shDwn == False):
+        if (pygame.time.get_ticks() - lastLEDMillis >= LEDMillis):
+            led_front1.value = random.choice(brList)
+            led_front2.value = random.choice(brList)
+            led_front3.value = random.choice(brList)
+            led_front4.value = random.choice(brList)
+            led_droidRed.value = random.choice(brList)
+            led_droidYlw.value = random.choice(brList)
+            lastLEDMillis = pygame.time.get_ticks()
 
 ## MUSIC ## - More or less done
 
