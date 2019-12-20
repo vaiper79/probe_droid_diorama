@@ -10,6 +10,21 @@ Remaining Items:
 
 Done/Ignored/Fixed/Created/Removed/Tested (version numbers are internal for now):
 
+Version 7 - 20.12.2019:
+- Added: State machine, pressing the button does different things in a pattern.
+	First time: Audio FX on.
+	Second time: Music on. 
+	Third time: Music off. 
+	Fourht time: Audio FX off. 
+	Fifth time = First time..
+- Added: Shutdown RPi OS command
+- Changed: Startng quiet, no sound. Must press the button. 
+- Changed: LED pins. Terminal block damaged, and found that a couple of LEDs were actually attached to same pin, possibly due to that terminal block being loose and the wire having come loose and landed on another pin by accident. 
+- Changed: Increased brightness on droid LEDs
+- Changed: Made droid LEDs solid, only button and fron LEDs flicker
+- Added: Volume limiter to protect speaker.
+- Changed: Starting volume decreased quite a bit. 
+
 Version 6 - 25.11.2019:
 - Changed: LED code now flickers desired LEDs (front facing and droid head) using a list of values
 - Changed: Shutdown now gives a visual cue using the front LEDs

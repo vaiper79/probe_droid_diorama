@@ -1,6 +1,6 @@
 # Python3
 
-# Version 6, 25.11.2019, OleA aka vaiper79
+# Version 7, 20.12.2019, OleA aka vaiper79
 # Volume configuration by Adafruit:
 # Hardware: MCP3008 DAC Chip 
 # Code: https://learn.adafruit.com/reading-a-analog-in-and-controlling-audio-volume-with-the-raspberry-pi/overview
@@ -19,14 +19,15 @@ from signal import pause
 # Shutdown
 shDwn = False
 # Audio
-volume = 0.6
+volume = 0.1
+maxVolume = 0.3
 started = 0
 rndmChatterMillis = 0
 lastChatterMillis = 0
 rndmTelemetryMillis = 0
 lastTelemetryMillis = 0
-musicTriggered = 0
-musicState = 0
+buttonTriggered = True
+audioState = 0
 # LEDs
 lastLEDMillis = 0
 lastCountDMillis = 0
@@ -48,26 +49,18 @@ tpa = adafruit_tpa2016.TPA2016(i2c)
 tpa.fixed_gain = 0 # Anything above and the way it is connected now causes clipping. Perhaps separate of more powerful PSU = more oomf!
 
 # GPIO Pins defined
+# GPIO19 is busted. Terminal wont hold. 
 button_top = Button(17, hold_time=3)  
 button_volUp = Button(4)
 button_volDwn = Button(27)
 led_front1 = PWMLED(5)
 led_front2 = PWMLED(6)
 led_front3 = PWMLED(13) 
-led_front4 = PWMLED(19)
+led_front4 = PWMLED(24)
 led_button = PWMLED(26)
 #led_droidRed = GPIO.PWM(18, 1000) # HW PWM
 led_droidRed = PWMLED(18)
-led_droidYlw = PWMLED(16)
-
-# Making sure all is dark
-led_front1.value = 0
-led_front2.value = 0
-led_front3.value = 0
-led_front4.value = 0
-led_button.value = 0
-led_droidRed.value = 0
-led_droidYlw.value = 0
+led_droidYlw = PWMLED(25)
 
 pygame.init() # Required to get_ticks() since start
 
@@ -90,14 +83,19 @@ chatterChannel = pygame.mixer.Channel(2)
 hoverChannel = pygame.mixer.Channel(3)
 telemetryChannel = pygame.mixer.Channel(4)
 
-# Set the volume for all channels separately.. 
-pygame.mixer.music.set_volume(volume)
-pygame.mixer.Channel(1).set_volume(volume)
-pygame.mixer.Channel(2).set_volume(volume)
-pygame.mixer.Channel(3).set_volume(volume)
-pygame.mixer.Channel(4).set_volume(volume)
+# Set the volume for all channels separately.. start silent
+pygame.mixer.music.set_volume(0)
+pygame.mixer.Channel(1).set_volume(0)
+pygame.mixer.Channel(2).set_volume(0)
+pygame.mixer.Channel(3).set_volume(0)
+pygame.mixer.Channel(4).set_volume(0)
+
+# Set the droids lights
+led_droidRed.value = 0.1
+led_droidYlw.value = 0.2
 
 def volumeChange(volume):
+    print(volume)
     pygame.mixer.music.set_volume(volume)
     pygame.mixer.Channel(1).set_volume(volume)
     pygame.mixer.Channel(2).set_volume(volume)
@@ -105,19 +103,35 @@ def volumeChange(volume):
     pygame.mixer.Channel(4).set_volume(volume)
 
 def doIt(): # Could do one thing on the first press..something else on the next..etc...but what.. 
-    global musicState
-    global musicTriggered
-    log.debug("Turning off music")
-    if (musicState == 0 and musicTriggered == 0):
-        print("Set volume 0")
-        pygame.mixer.music.set_volume(0)
-        musicState = 1
-        musicTriggered = 1
-    if (musicState == 1 and musicTriggered == 0):
+    global audioState
+    global buttonTriggered
+    if(audioState == 0 and buttonTriggered == True):
+        log.debug("Turning on soundfx")
+        pygame.mixer.Channel(1).set_volume(volume)
+        pygame.mixer.Channel(2).set_volume(volume)
+        pygame.mixer.Channel(3).set_volume(volume)
+        pygame.mixer.Channel(4).set_volume(volume)
+        audioState = 1
+        buttonTriggered = False    
+    if (audioState == 1 and buttonTriggered == True):
+        log.debug("Turning on music")
         pygame.mixer.music.set_volume(volume)
-        musicState = 0
-        musicTriggered = 1
-    musicTriggered = 0
+        audioState = 2
+        buttonTriggered = False    
+    if (audioState == 2 and buttonTriggered == True):
+        log.debug("Turning off music")
+        pygame.mixer.music.set_volume(0)
+        audioState = 3
+        buttonTriggered = False
+    if(audioState == 3 and buttonTriggered == True):
+        log.debug("Turning off audiofx")
+        pygame.mixer.Channel(1).set_volume(0)
+        pygame.mixer.Channel(2).set_volume(0)
+        pygame.mixer.Channel(3).set_volume(0)
+        pygame.mixer.Channel(4).set_volume(0)
+        audioState = 0
+        buttonTriggered = False
+    buttonTriggered = True # Might seem counter productive, but we need to reset the value as we exit the function.
 
 def shutDown():
     global shDwn 
@@ -129,7 +143,7 @@ def shutDown():
     led_front2.value = shDwnBr
     led_front3.value = shDwnBr
     led_front4.value = shDwnBr
-    time.sleep(0.5)             # It is fine, we are about to shut down, no more input or output at this time
+    time.sleep(0.5)
     led_front4.value = 0
     time.sleep(0.5)
     led_front3.value = 0
@@ -141,7 +155,7 @@ def shutDown():
     led_droidYlw = 0
     led_button = 0
     log.debug("Shutting down droid controller")
-    #check_call(['sudo', 'poweroff']) # Shutsdown the OS. Will leave this out until prod.. 
+    check_call(['sudo', 'poweroff']) # Shutsdown the OS. Will leave this out until prod.. 
     time.sleep(10)
 
 def volDwn():
@@ -153,7 +167,10 @@ def volDwn():
 def volUp():
     log.debug("Volume Up")
     global volume
+    global maxVolume
     volume = volume + 0.05
+    if (volume >= maxVolume):
+        volume = maxVolume    # Limit volume
     volumeChange(volume)
 
 # Start amplifier
@@ -176,8 +193,7 @@ while True:
             led_front2.value = random.choice(brList)
             led_front3.value = random.choice(brList)
             led_front4.value = random.choice(brList)
-            led_droidRed.value = random.choice(brList)
-            led_droidYlw.value = random.choice(brList)
+            led_button.value = random.choice(brList)
             lastLEDMillis = pygame.time.get_ticks()
 
 ## MUSIC ## - More or less done
