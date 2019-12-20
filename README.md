@@ -34,7 +34,7 @@ sudo chmod 644 /lib/systemd/system/droid.service
 Now the unit file has been defined we can tell systemd to start it during the boot sequence :
 ```
 sudo systemctl daemon-reload
-sudo systemctl enable sample.service
+sudo systemctl enable droid.service
 ```
 
 Reboot the Pi and your custom service should run:
@@ -44,10 +44,10 @@ sudo reboot
 
 Working with services in linux:
 ```
-sudo service sample status
-sudo service sample stop
-sudo service sample start
-sudo service sample restart
+sudo service droid status
+sudo service droid stop
+sudo service droid start
+sudo service droid restart
 ```
 
 ## Disclaimer: 
