@@ -2,10 +2,10 @@
 
 These are the files used to control the audio/lighting circuit I will use on my Imperial Probe Droid diorama. Check out my homepage/blog for more details. 
 
-##Setting up python script to launch on RPi boot
+## Setting up python script to launch on RPi boot
 To execute on boot;  systemd
 
-###Step 1 – Create A Unit File
+### Step 1 – Create A Unit File
 Enter the following:
 ```sudo nano /lib/systemd/system/droid.service```
 
@@ -30,7 +30,7 @@ The permission on the unit file needs to be set to 644 :
 sudo chmod 644 /lib/systemd/system/droid.service
 ```
 
-###Step 2 – Configure systemd
+### Step 2 – Configure systemd
 Now the unit file has been defined we can tell systemd to start it during the boot sequence :
 ```
 sudo systemctl daemon-reload
@@ -50,7 +50,7 @@ sudo service sample start
 sudo service sample restart
 ```
 
-##Disclaimer: 
+## Disclaimer: 
 I am NOT a professional programmer. There WILL be bugs and weird mistakes. I try to remove them when I find them, but I cannot guarantee that all my solutions used in the code are good/best practice. Also, I am pretty sure this won't destroy your hardware if you try it for yourself, but obviously I take no responsibility if you decide to use my code.. 
 
 You have been warned :) 
